@@ -1,12 +1,11 @@
 # ghostwriter
 
-A fresh repository scaffold.
+Focused, offline-first writing canvas with paranoid backups.
 
 ## Getting Started
 
-- Describe what this project does.
-- Document install and usage steps.
+1. Run a local static server (service workers require a server):
+   `python3 -m http.server 8080`
+2. Open `http://localhost:8080` and start writing.
 
-## Development
-
-- Add local development notes and commands.
+Your text and backups are stored locally in IndexedDB. Export and import use plain text files.

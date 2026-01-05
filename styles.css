@@ -1,0 +1,377 @@
+:root {
+  --bg: #f6ecdd;
+  --bg-deep: #ecdcc6;
+  --ink: #2b2622;
+  --muted: #786b60;
+  --accent: #b25c2d;
+  --panel: #fff7ed;
+  --panel-border: rgba(43, 38, 34, 0.08);
+  --shadow: rgba(43, 38, 34, 0.12);
+  --line-width: 680px;
+  --font-size: 18px;
+  --ui-font: "Work Sans", sans-serif;
+  --editor-font: "Fraunces", serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at 10% 10%, #fff4e6 0%, var(--bg) 45%, var(--bg-deep) 100%);
+  color: var(--ink);
+  font-family: var(--ui-font);
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20% -10% 0 -10%;
+  background: radial-gradient(circle at 80% 20%, rgba(178, 92, 45, 0.15), transparent 60%),
+    radial-gradient(circle at 20% 80%, rgba(43, 38, 34, 0.08), transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body[data-font="fraunces"] {
+  --editor-font: "Fraunces", serif;
+}
+
+body[data-font="work-sans"] {
+  --editor-font: "Work Sans", sans-serif;
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  padding: 24px 20px 32px;
+  animation: fade-in 0.8s ease;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.status {
+  font-size: 0.85rem;
+  color: var(--muted);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.status.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.menu-button {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.menu-button:hover,
+.menu-button:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 8px 18px rgba(178, 92, 45, 0.18);
+  transform: translateY(-1px);
+}
+
+.canvas {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+#editor {
+  width: min(92vw, var(--line-width));
+  flex: 1;
+  font-family: var(--editor-font);
+  font-size: var(--font-size);
+  line-height: 1.7;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  padding: 32px 8px 64px;
+  resize: none;
+  min-height: 70vh;
+  caret-color: var(--accent);
+}
+
+#editor::placeholder {
+  color: rgba(120, 107, 96, 0.6);
+}
+
+#editor:focus-visible {
+  outline: 2px solid rgba(178, 92, 45, 0.4);
+  outline-offset: 8px;
+  border-radius: 12px;
+}
+
+.menu-panel {
+  position: absolute;
+  top: 64px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--panel);
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 20px 40px var(--shadow);
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.menu-panel.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.menu-item {
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-family: var(--ui-font);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: rgba(178, 92, 45, 0.12);
+}
+
+.file-input {
+  display: none;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(43, 38, 34, 0.35);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 2;
+}
+
+.dialog-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dialog {
+  width: min(92vw, 720px);
+  max-height: 85vh;
+  background: var(--panel);
+  border-radius: 20px;
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 30px 60px rgba(43, 38, 34, 0.25);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  animation: rise-in 0.25s ease;
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.dialog-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.icon-button {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.snapshot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 45vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.snapshot-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: rgba(43, 38, 34, 0.04);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.snapshot-item.selected {
+  border-color: rgba(178, 92, 45, 0.45);
+  background: rgba(178, 92, 45, 0.14);
+}
+
+.snapshot-item span:last-child {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+}
+
+.snapshot-preview {
+  border-radius: 12px;
+  border: 1px dashed var(--panel-border);
+  padding: 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+  min-height: 90px;
+  background: rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.button {
+  font-family: var(--ui-font);
+  font-size: 0.9rem;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+}
+
+.button.primary {
+  background: var(--accent);
+  color: white;
+}
+
+.button.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.button.ghost {
+  background: transparent;
+  color: var(--muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.field input,
+.field select {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: white;
+  font-family: var(--ui-font);
+  color: var(--ink);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 720px) {
+  .app {
+    padding: 18px 16px 28px;
+  }
+
+  .menu-panel {
+    right: 16px;
+  }
+
+  #editor {
+    padding: 24px 4px 56px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app,
+  .dialog {
+    animation: none;
+  }
+
+  .menu-panel,
+  .status {
+    transition: none;
+  }
+}
