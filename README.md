@@ -8,4 +8,4 @@ Focused, offline-first writing canvas with paranoid backups.
    `python3 -m http.server 8080`
 2. Open `http://localhost:8080` and start writing.
 
-Your text and backups are stored locally in IndexedDB. Export and import use plain text files.
+Your text and backups are stored locally in IndexedDB. Save and load use plain text files, with direct file access in browsers that support it.

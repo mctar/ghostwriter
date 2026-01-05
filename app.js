@@ -6,13 +6,22 @@ const SNAPSHOT_INTERVAL_MS = 30000;
 const IDLE_SNAPSHOT_MS = 6000;
 const MAX_ROLLING = 200;
 const MAX_DAILY = 30;
+const FILE_HANDLE_KEY = "fileHandle";
+const FILE_TYPES = [
+  {
+    description: "Text files",
+    accept: {
+      "text/plain": [".txt", ".md", ".text"],
+    },
+  },
+];
 
 const editor = document.getElementById("editor");
 const statusEl = document.getElementById("status");
 const menuButton = document.getElementById("menu-button");
 const menuPanel = document.getElementById("menu-panel");
-const exportButton = document.getElementById("export-button");
-const importButton = document.getElementById("import-button");
+const saveButton = document.getElementById("save-button");
+const loadButton = document.getElementById("load-button");
 const restoreButton = document.getElementById("restore-button");
 const settingsButton = document.getElementById("settings-button");
 const fileInput = document.getElementById("file-input");
@@ -41,6 +50,7 @@ let saveQueue = Promise.resolve();
 let snapshotQueue = Promise.resolve();
 let lastDailySnapshotDay = null;
 let statusTimer;
+let fileHandle = null;
 
 init();
 
@@ -63,8 +73,8 @@ function attachEventListeners() {
   window.addEventListener("pagehide", handlePageHide);
 
   menuButton.addEventListener("click", () => toggleMenu());
-  exportButton.addEventListener("click", handleExport);
-  importButton.addEventListener("click", () => fileInput.click());
+  saveButton.addEventListener("click", handleSave);
+  loadButton.addEventListener("click", handleLoad);
   restoreButton.addEventListener("click", () => openRestoreDialog(false));
   settingsButton.addEventListener("click", openSettingsDialog);
 
@@ -75,7 +85,7 @@ function attachEventListeners() {
   settingsClose.addEventListener("click", closeSettingsDialog);
   settingsDone.addEventListener("click", closeSettingsDialog);
 
-  fileInput.addEventListener("change", handleImport);
+  fileInput.addEventListener("change", handleLoadFromInput);
   fontSizeInput.addEventListener("input", handleFontSizeChange);
   lineWidthSelect.addEventListener("change", handleLineWidthChange);
   fontFamilySelect.addEventListener("change", handleFontFamilyChange);
@@ -94,11 +104,11 @@ function handleDocumentClick(event) {
 function handleKeydown(event) {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
     event.preventDefault();
-    handleExport();
+    handleSave();
   }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "o") {
     event.preventDefault();
-    fileInput.click();
+    handleLoad();
   }
   if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "r") {
     event.preventDefault();
@@ -189,37 +199,72 @@ function closeMenu() {
   menuButton.setAttribute("aria-expanded", "false");
 }
 
-async function handleExport() {
+async function handleSave() {
   closeMenu();
-  queueSave("silent");
+  await queueSave("silent");
   const text = editor.value;
-  const blob = new Blob([text], { type: "text/plain" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = buildExportName();
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-  flashStatus("Exported");
+  if (supportsFileSystemAccess()) {
+    try {
+      const handle = await getWritableHandle();
+      if (!handle) {
+        return;
+      }
+      await writeTextToHandle(handle, text);
+      flashStatus(`Saved to file - ${formatTime(Date.now())}`);
+      return;
+    } catch (error) {
+      if (error && error.name === "AbortError") {
+        return;
+      }
+    }
+  }
+  downloadText(text);
+  flashStatus(`Saved file - ${formatTime(Date.now())}`);
 }
 
-function handleImport(event) {
+async function handleLoad() {
+  closeMenu();
+  if (supportsOpenPicker()) {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: FILE_TYPES,
+        multiple: false,
+      });
+      if (!handle) {
+        return;
+      }
+      fileHandle = handle;
+      await storeFileHandle(handle);
+      const file = await handle.getFile();
+      await applyLoadedText(await file.text());
+      return;
+    } catch (error) {
+      if (error && error.name === "AbortError") {
+        return;
+      }
+    }
+  }
+  fileInput.click();
+}
+
+function handleLoadFromInput(event) {
   const file = event.target.files[0];
   if (!file) {
     return;
   }
   const reader = new FileReader();
   reader.onload = async () => {
-    editor.value = reader.result;
-    needsSnapshot = true;
-    await queueSave("import");
-    await queueSnapshot("rolling");
+    await applyLoadedText(reader.result);
   };
   reader.readAsText(file);
   event.target.value = "";
-  closeMenu();
+}
+
+async function applyLoadedText(text) {
+  editor.value = text;
+  needsSnapshot = true;
+  await queueSave("load");
+  await queueSnapshot("rolling");
 }
 
 async function openRestoreDialog(autoSelectLatest) {
@@ -330,9 +375,75 @@ function handleFontFamilyChange(event) {
   setSetting("fontFamily", value);
 }
 
-function buildExportName() {
+function buildSaveName() {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   return `ghostwriter-${timestamp}.txt`;
+}
+
+function downloadText(text) {
+  const blob = new Blob([text], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = buildSaveName();
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function supportsFileSystemAccess() {
+  return "showSaveFilePicker" in window;
+}
+
+function supportsOpenPicker() {
+  return "showOpenFilePicker" in window;
+}
+
+async function getWritableHandle() {
+  if (fileHandle) {
+    const granted = await ensureWritePermission(fileHandle);
+    if (granted) {
+      return fileHandle;
+    }
+  }
+  if (!supportsFileSystemAccess()) {
+    return null;
+  }
+  const handle = await window.showSaveFilePicker({
+    suggestedName: buildSaveName(),
+    types: FILE_TYPES,
+  });
+  fileHandle = handle;
+  await storeFileHandle(handle);
+  return handle;
+}
+
+async function writeTextToHandle(handle, text) {
+  const writable = await handle.createWritable();
+  await writable.write(text);
+  await writable.close();
+}
+
+async function ensureWritePermission(handle) {
+  if (!handle.queryPermission || !handle.requestPermission) {
+    return true;
+  }
+  const options = { mode: "readwrite" };
+  const status = await handle.queryPermission(options);
+  if (status === "granted") {
+    return true;
+  }
+  const request = await handle.requestPermission(options);
+  return request === "granted";
+}
+
+async function storeFileHandle(handle) {
+  try {
+    await setSetting(FILE_HANDLE_KEY, handle);
+  } catch (error) {
+    // Ignore if the browser blocks storing file handles.
+  }
 }
 
 function flashStatus(message) {
@@ -413,8 +524,8 @@ async function saveDoc(reason) {
     flashStatus(`Restored - ${formatTime(now)}`);
     return;
   }
-  if (reason === "import") {
-    flashStatus(`Imported - ${formatTime(now)}`);
+  if (reason === "load") {
+    flashStatus(`Loaded - ${formatTime(now)}`);
     return;
   }
   flashStatus(`Saved - ${formatTime(now)}`);
@@ -486,6 +597,7 @@ async function loadSettings() {
   const lineWidth = await getSetting("lineWidth", 680);
   const fontFamily = await getSetting("fontFamily", "fraunces");
   lastDailySnapshotDay = await getSetting("lastDailySnapshotDay", null);
+  fileHandle = await getSetting(FILE_HANDLE_KEY, null);
 
   fontSizeInput.value = fontSize;
   lineWidthSelect.value = String(lineWidth);
