@@ -1,7 +1,15 @@
 const VERSION = "v1";
 const STATIC_CACHE = `ghostwriter-static-${VERSION}`;
 const RUNTIME_CACHE = `ghostwriter-runtime-${VERSION}`;
-const APP_ASSETS = ["./", "./index.html", "./styles.css", "./app.js"];
+const APP_ASSETS = [
+  "./",
+  "./index.html",
+  "./styles.css",
+  "./app.js",
+  "./manifest.webmanifest",
+  "./icon-192.png",
+  "./icon-512.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
