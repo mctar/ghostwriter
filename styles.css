@@ -144,6 +144,13 @@ body[data-font="work-sans"] {
   transform: translateY(-1px);
 }
 
+.shortcut-hint {
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
 .canvas {
   flex: 1;
   display: flex;
@@ -405,6 +412,10 @@ body[data-font="work-sans"] {
     width: 100%;
     justify-content: flex-end;
     gap: 6px;
+  }
+
+  .shortcut-hint {
+    display: none;
   }
 
   .action-button {
