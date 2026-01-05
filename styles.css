@@ -63,6 +63,21 @@ body[data-font="work-sans"] {
   align-items: center;
   gap: 16px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.topbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .status {
@@ -78,6 +93,17 @@ body[data-font="work-sans"] {
   transform: translateY(0);
 }
 
+.file-name {
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  max-width: 60vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .menu-button {
   font-size: 0.85rem;
   letter-spacing: 0.08em;
@@ -89,6 +115,26 @@ body[data-font="work-sans"] {
   color: var(--ink);
   cursor: pointer;
   transition: border 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.action-button {
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s ease, border 0.2s ease, transform 0.2s ease;
+}
+
+.action-button:hover,
+.action-button:focus-visible {
+  color: var(--ink);
+  border-color: rgba(178, 92, 45, 0.3);
+  transform: translateY(-1px);
 }
 
 .menu-button:hover,
@@ -353,6 +399,16 @@ body[data-font="work-sans"] {
 @media (max-width: 720px) {
   .app {
     padding: 18px 16px 28px;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .action-button {
+    padding: 6px 10px;
   }
 
   .menu-panel {

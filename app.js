@@ -7,6 +7,8 @@ const IDLE_SNAPSHOT_MS = 6000;
 const MAX_ROLLING = 200;
 const MAX_DAILY = 30;
 const FILE_HANDLE_KEY = "fileHandle";
+const FILE_NAME_KEY = "fileName";
+const DEFAULT_FILE_LABEL = "Draft";
 const FILE_TYPES = [
   {
     description: "Text files",
@@ -18,6 +20,7 @@ const FILE_TYPES = [
 
 const editor = document.getElementById("editor");
 const statusEl = document.getElementById("status");
+const fileNameEl = document.getElementById("file-name");
 const menuButton = document.getElementById("menu-button");
 const menuPanel = document.getElementById("menu-panel");
 const saveButton = document.getElementById("save-button");
@@ -51,6 +54,7 @@ let snapshotQueue = Promise.resolve();
 let lastDailySnapshotDay = null;
 let statusTimer;
 let fileHandle = null;
+let currentFileName = DEFAULT_FILE_LABEL;
 
 init();
 
@@ -218,7 +222,9 @@ async function handleSave() {
       }
     }
   }
-  downloadText(text);
+  const suggestedName = getSuggestedName();
+  downloadText(text, suggestedName);
+  setFileName(suggestedName);
   flashStatus(`Saved file - ${formatTime(Date.now())}`);
 }
 
@@ -233,8 +239,7 @@ async function handleLoad() {
       if (!handle) {
         return;
       }
-      fileHandle = handle;
-      await storeFileHandle(handle);
+      await setFileHandle(handle);
       const file = await handle.getFile();
       await applyLoadedText(await file.text());
       return;
@@ -254,6 +259,8 @@ function handleLoadFromInput(event) {
   }
   const reader = new FileReader();
   reader.onload = async () => {
+    await clearFileHandle();
+    setFileName(file.name);
     await applyLoadedText(reader.result);
   };
   reader.readAsText(file);
@@ -380,12 +387,38 @@ function buildSaveName() {
   return `ghostwriter-${timestamp}.txt`;
 }
 
-function downloadText(text) {
+function getSuggestedName() {
+  if (currentFileName && currentFileName !== DEFAULT_FILE_LABEL) {
+    return currentFileName;
+  }
+  return buildSaveName();
+}
+
+function setFileName(name, persist = true) {
+  const label = name && name.trim() ? name.trim() : DEFAULT_FILE_LABEL;
+  currentFileName = label;
+  if (fileNameEl) {
+    fileNameEl.textContent = label;
+  }
+  if (persist) {
+    setSetting(FILE_NAME_KEY, label).catch(() => {});
+  }
+}
+
+async function setFileHandle(handle) {
+  fileHandle = handle;
+  if (handle && handle.name) {
+    setFileName(handle.name);
+  }
+  await storeFileHandle(handle);
+}
+
+function downloadText(text, filename) {
   const blob = new Blob([text], { type: "text/plain" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = buildSaveName();
+  link.download = filename || buildSaveName();
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -411,11 +444,10 @@ async function getWritableHandle() {
     return null;
   }
   const handle = await window.showSaveFilePicker({
-    suggestedName: buildSaveName(),
+    suggestedName: getSuggestedName(),
     types: FILE_TYPES,
   });
-  fileHandle = handle;
-  await storeFileHandle(handle);
+  await setFileHandle(handle);
   return handle;
 }
 
@@ -444,6 +476,11 @@ async function storeFileHandle(handle) {
   } catch (error) {
     // Ignore if the browser blocks storing file handles.
   }
+}
+
+async function clearFileHandle() {
+  fileHandle = null;
+  await storeFileHandle(null);
 }
 
 function flashStatus(message) {
@@ -597,7 +634,11 @@ async function loadSettings() {
   const lineWidth = await getSetting("lineWidth", 680);
   const fontFamily = await getSetting("fontFamily", "fraunces");
   lastDailySnapshotDay = await getSetting("lastDailySnapshotDay", null);
+  let storedName = await getSetting(FILE_NAME_KEY, DEFAULT_FILE_LABEL);
   fileHandle = await getSetting(FILE_HANDLE_KEY, null);
+  if (fileHandle && fileHandle.name) {
+    storedName = fileHandle.name;
+  }
 
   fontSizeInput.value = fontSize;
   lineWidthSelect.value = String(lineWidth);
@@ -606,6 +647,7 @@ async function loadSettings() {
   document.documentElement.style.setProperty("--font-size", `${fontSize}px`);
   document.documentElement.style.setProperty("--line-width", `${lineWidth}px`);
   document.body.setAttribute("data-font", fontFamily);
+  setFileName(storedName, false);
 }
 
 async function maybeOfferRestore() {

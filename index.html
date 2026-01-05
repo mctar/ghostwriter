@@ -17,15 +17,20 @@
   <body>
     <div class="app">
       <header class="topbar">
-        <div class="status" id="status" aria-live="polite"></div>
-        <button class="menu-button" id="menu-button" aria-haspopup="true" aria-expanded="false">Menu</button>
+        <div class="topbar-left">
+          <div class="status" id="status" aria-live="polite"></div>
+          <div class="file-name" id="file-name">Draft</div>
+        </div>
+        <div class="topbar-actions">
+          <button class="action-button" id="load-button">Load</button>
+          <button class="action-button" id="save-button">Save</button>
+          <button class="menu-button" id="menu-button" aria-haspopup="true" aria-expanded="false">Menu</button>
+        </div>
       </header>
       <main class="canvas">
         <textarea id="editor" spellcheck="true" placeholder="Start writing..." aria-label="Writing canvas"></textarea>
       </main>
       <div class="menu-panel" id="menu-panel" role="menu" aria-hidden="true">
-        <button class="menu-item" id="save-button" role="menuitem">Save</button>
-        <button class="menu-item" id="load-button" role="menuitem">Load</button>
         <button class="menu-item" id="restore-button" role="menuitem">Restore</button>
         <button class="menu-item" id="settings-button" role="menuitem">Settings</button>
       </div>
