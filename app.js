@@ -205,8 +205,8 @@ function closeMenu() {
 
 async function handleSave() {
   closeMenu();
-  await queueSave("silent");
   const text = editor.value;
+  queueSave("silent");
   if (supportsFileSystemAccess()) {
     try {
       const handle = await getWritableHandle();
